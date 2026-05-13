@@ -109,15 +109,6 @@ export default function TrackClient() {
     return () => clearInterval(interval)
   }, [urlId])
 
-  const clearSession = () => {
-    try {
-      localStorage.removeItem('trackingSession')
-      window.location.href = '/'
-    } catch (err) {
-      console.error('Failed to clear session:', err)
-    }
-  }
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 flex items-center justify-center p-4">
@@ -177,15 +168,7 @@ export default function TrackClient() {
           >
             ShipStream
           </motion.a>
-          <div className="flex gap-3 sm:gap-4">
-            <button 
-              onClick={clearSession}
-              className="text-gray-400 hover:text-gray-200 text-xs sm:text-sm transition hover:bg-slate-800 px-2 sm:px-3 py-1 rounded"
-            >
-              New Tracking
-            </button>
-            <a href="/" className="text-gray-400 hover:text-gray-200 text-xs sm:text-sm transition">Back Home</a>
-          </div>
+          <a href="/" className="text-gray-400 hover:text-gray-200 text-xs sm:text-sm transition">Back Home</a>
         </div>
       </motion.div>
 
@@ -270,51 +253,30 @@ export default function TrackClient() {
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="mb-6 bg-gradient-to-br from-amber-500/15 via-orange-500/15 to-red-500/15 rounded-xl p-6 border border-amber-500/40 backdrop-blur-sm shadow-xl"
+              className="mb-6 sm:mb-8 bg-gradient-to-br from-amber-500/10 via-orange-500/10 to-red-500/10 rounded-lg sm:rounded-2xl p-4 sm:p-6 border border-amber-500/30 backdrop-blur-sm shadow-lg"
             >
-              <div className="flex gap-3 sm:gap-4">
-                <div className="text-2xl sm:text-4xl mt-1 flex-shrink-0">⚠️</div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-bold text-base sm:text-lg mb-2">Delivery Status Alert</h3>
-                  <p className="text-gray-100 text-xs sm:text-sm mb-4 leading-relaxed">
-                    We've encountered an unexpected delay with your shipment. Our logistics team is actively investigating the situation and working to resolve this issue as quickly as possible.
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="text-3xl sm:text-2xl flex-shrink-0">⚠️</div>
+                <div className="flex-1">
+                  <h3 className="text-white font-bold text-base sm:text-lg mb-2">Delivery Delayed</h3>
+                  <p className="text-gray-200 text-xs sm:text-sm mb-4 leading-relaxed">
+                    Your shipment is experiencing an unexpected delay. Our logistics team is investigating and working to resolve this.
                   </p>
                   
-                  <div className="bg-slate-800/50 rounded-lg p-3 sm:p-4 mb-4 border border-amber-500/20">
-                    <h4 className="font-semibold text-white text-xs sm:text-sm mb-3">What's happening?</h4>
-                    <ul className="space-y-2 text-xs text-gray-300">
-                      <li>Package located at distribution facility</li>
-                      <li>Weather-related delays affecting local delivery</li>
-                      <li>Expected resolution: 24-48 hours</li>
+                  <div className="bg-slate-800/40 rounded-lg p-3 sm:p-4 mb-4 border border-amber-500/20">
+                    <h4 className="font-semibold text-white text-xs sm:text-sm mb-2">Status Update</h4>
+                    <ul className="space-y-1 text-xs text-gray-300">
+                      <li>• Package in transit but behind schedule</li>
+                      <li>• Expected delivery within 24-48 hours</li>
+                      <li>• We are monitoring this shipment closely</li>
                     </ul>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
-                    <div className="bg-slate-700/50 rounded-lg p-3 border border-slate-600">
-                      <p className="text-xs text-gray-400 truncate">Support Ticket</p>
-                      <p className="text-white font-mono font-bold text-xs sm:text-sm break-all">TKT-{trackingData.id.slice(-4)}</p>
-                    </div>
-                    <div className="bg-slate-700/50 rounded-lg p-3 border border-slate-600">
-                      <p className="text-xs text-gray-400 truncate">Contact Ref</p>
-                      <p className="text-white font-mono font-bold text-xs sm:text-sm break-all">{trackingData.id}</p>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-500/10 rounded-lg p-3 sm:p-4 border border-blue-500/30 mb-4">
-                    <h4 className="font-semibold text-white text-xs sm:text-sm mb-2">Next Steps</h4>
-                    <p className="text-xs text-blue-100 mb-3">
-                      Our team will contact you within 24 hours. Reach us:
+                  <div className="bg-blue-500/10 rounded-lg p-3 sm:p-4 border border-blue-500/20">
+                    <p className="text-xs text-blue-200">
+                      Support Team: <span className="text-blue-100 font-semibold">support@shipstream.com</span>
                     </p>
-                    <div className="space-y-1 text-xs text-blue-200 break-words">
-                      <p>support@shipstream.com</p>
-                      <p>1-800-744-7878</p>
-                      <p>Live Chat: 24/7</p>
-                    </div>
                   </div>
-
-                  <p className="text-xs text-gray-500">
-                    Last checked: {new Date().toLocaleString('en-US', { timeZone: 'America/New_York' })} (EST)
-                  </p>
                 </div>
               </div>
             </motion.div>

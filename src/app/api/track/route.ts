@@ -18,7 +18,7 @@ interface TrackingData {
 const SESSION_STORAGE: Record<string, number> = {}
 
 const TRACKING_DATABASE = {
-  'SHP-928371': {
+  'USS0947261': {
     createdAt: new Date(Date.now()),
     origin: 'New York Distribution Center',
     destination: 'San Francisco, CA',
@@ -30,7 +30,7 @@ const TRACKING_DATABASE = {
     ],
     updateIntervalMinutes: 40, // Status updates every 40 minutes - total 2 hours to stage 3
   },
-  'SS-2026-4839': {
+  'USS1384529': {
     createdAt: new Date(Date.now()),
     origin: 'Los Angeles Distribution Center',
     destination: 'Miami, FL',
