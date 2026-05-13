@@ -45,7 +45,7 @@ const TRACKING_DATABASE = {
 }
 
 function calculateStatus(
-  trackingData: (typeof TRACKING_DATABASE)['SHP-928371'],
+  trackingData: (typeof TRACKING_DATABASE)[keyof typeof TRACKING_DATABASE],
 ): number {
   const now = new Date()
   const elapsedMinutes = (now.getTime() - trackingData.createdAt.getTime()) / (1000 * 60)
@@ -55,7 +55,7 @@ function calculateStatus(
 }
 
 function generateEvents(
-  trackingData: (typeof TRACKING_DATABASE)['SHP-928371'],
+  trackingData: (typeof TRACKING_DATABASE)[keyof typeof TRACKING_DATABASE],
   currentStatus: number,
 ): Array<{ step: string; timestamp: string }> {
   const events = []
