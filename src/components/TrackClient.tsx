@@ -19,20 +19,67 @@ interface TrackingData {
   errorMessage?: string
 }
 
+interface SessionData {
+  trackingId: string
+  startedAt: number
+}
+
 export default function TrackClient() {
   const searchParams = useSearchParams()
-  const id = searchParams.get('id')
+  const urlId = searchParams.get('id')
   const [trackingData, setTrackingData] = useState<TrackingData | null>(null)
   const [loading, setLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<string>('')
   const [error, setError] = useState('')
+  const [activeId, setActiveId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!id) return
+    // Initialize session and determine which tracking ID to use
+    let trackingId = urlId
+    let sessionData: SessionData | null = null
+
+    // Try to restore session from localStorage
+    try {
+      const saved = localStorage.getItem('trackingSession')
+      if (saved) {
+        sessionData = JSON.parse(saved)
+      }
+    } catch (err) {
+      console.error('Failed to parse session:', err)
+    }
+
+    // If URL has ID, use it and save new session
+    if (urlId) {
+      sessionData = {
+        trackingId: urlId,
+        startedAt: Date.now(),
+      }
+      try {
+        localStorage.setItem('trackingSession', JSON.stringify(sessionData))
+      } catch (err) {
+        console.error('Failed to save session:', err)
+      }
+    }
+    // Otherwise use restored session if available
+    else if (sessionData) {
+      trackingId = sessionData.trackingId
+    }
+
+    if (!trackingId) {
+      setLoading(false)
+      return
+    }
+
+    setActiveId(trackingId)
 
     const fetchTrackingData = async () => {
       try {
-        const response = await fetch(`/api/track?id=${id}`)
+        // Pass startedAt time to API so it maintains consistent progression
+        const params = new URLSearchParams({
+          id: trackingId,
+          ...(sessionData && { startedAt: sessionData.startedAt.toString() }),
+        })
+        const response = await fetch(`/api/track?${params}`)
         if (response.ok) {
           const data = await response.json()
           setTrackingData(data)
@@ -60,7 +107,16 @@ export default function TrackClient() {
     const interval = setInterval(fetchTrackingData, 30 * 1000)
     
     return () => clearInterval(interval)
-  }, [id])
+  }, [urlId])
+
+  const clearSession = () => {
+    try {
+      localStorage.removeItem('trackingSession')
+      window.location.href = '/'
+    } catch (err) {
+      console.error('Failed to clear session:', err)
+    }
+  }
 
   if (loading) {
     return (
@@ -121,7 +177,15 @@ export default function TrackClient() {
           >
             ShipStream
           </motion.a>
-          <a href="/" className="text-gray-400 hover:text-gray-200 text-xs sm:text-sm transition">Back Home</a>
+          <div className="flex gap-3 sm:gap-4">
+            <button 
+              onClick={clearSession}
+              className="text-gray-400 hover:text-gray-200 text-xs sm:text-sm transition hover:bg-slate-800 px-2 sm:px-3 py-1 rounded"
+            >
+              New Tracking
+            </button>
+            <a href="/" className="text-gray-400 hover:text-gray-200 text-xs sm:text-sm transition">Back Home</a>
+          </div>
         </div>
       </motion.div>
 
