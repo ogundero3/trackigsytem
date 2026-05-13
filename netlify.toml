@@ -1,11 +1,13 @@
 [build]
 command = "npm run build"
-functions = "netlify/functions"
-publish = ".next"
+publish = ".next/standalone"
+
+[functions]
+node_bundler = "esbuild"
 
 [[redirects]]
-from = "/*"
-to = "/index.html"
+from = "/api/*"
+to = "/.netlify/functions/:splat"
 status = 200
 
 [dev]
@@ -13,11 +15,11 @@ command = "npm run dev"
 port = 3000
 
 [[headers]]
-for = "/*"
-[headers.values]
-Cache-Control = "public, max-age=3600"
-
-[[headers]]
 for = "/_next/static/*"
 [headers.values]
 Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+for = "/api/*"
+[headers.values]
+Cache-Control = "public, max-age=0, must-revalidate"
