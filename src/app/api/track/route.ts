@@ -78,17 +78,23 @@ function generateEvents(
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const trackingId = searchParams.get('id')
-  const startedAt = searchParams.get('startedAt')
+  let startedAt = searchParams.get('startedAt')
 
   if (!trackingId || !(trackingId in TRACKING_DATABASE)) {
     return NextResponse.json({ error: 'Tracking ID not found' }, { status: 404 })
   }
 
+  // If no startedAt provided, this is first request - set it to NOW
+  // BUT: This should NOT happen if client is sending it correctly
+  if (!startedAt) {
+    console.warn(`⚠️ Missing startedAt for ${trackingId} - this should not happen!`)
+    startedAt = Date.now().toString()
+  }
+
   const trackingData = TRACKING_DATABASE[trackingId as keyof typeof TRACKING_DATABASE]
   
-  // ALWAYS use the startedAt time from client (stored in localStorage)
-  // This ensures consistent progression regardless of server restarts
-  const sessionStartTime = startedAt ? parseInt(startedAt) : Date.now()
+  // Parse the startedAt time (always from client)
+  const sessionStartTime = parseInt(startedAt, 10)
   trackingData.createdAt = new Date(sessionStartTime)
   
   const currentStatus = calculateStatus(trackingData)

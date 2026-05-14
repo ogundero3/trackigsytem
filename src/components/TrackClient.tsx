@@ -74,12 +74,15 @@ export default function TrackClient() {
 
     const fetchTrackingData = async () => {
       try {
-        // Pass startedAt time to API so it maintains consistent progression
-        const params = new URLSearchParams({
-          id: trackingId,
-          ...(sessionData && { startedAt: sessionData.startedAt.toString() }),
-        })
-        const response = await fetch(`/api/track?${params}`)
+        // MUST send startedAt from sessionData to maintain consistent progression
+        if (!sessionData?.startedAt) {
+          console.error('ERROR: sessionData.startedAt is missing!', sessionData)
+          return
+        }
+        
+        const url = `/api/track?id=${trackingId}&startedAt=${sessionData.startedAt}`
+        const response = await fetch(url)
+        
         if (response.ok) {
           const data = await response.json()
           setTrackingData(data)
