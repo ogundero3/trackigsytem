@@ -48,19 +48,35 @@ export default function TrackClient() {
       console.error('Failed to parse session:', err)
     }
 
-    // If URL has ID, use it and save new session
+    // If URL has ID, check if it's a NEW tracking request or continuing
     if (urlId) {
-      sessionData = {
-        trackingId: urlId,
-        startedAt: Date.now(),
+      // If there's an existing session with a DIFFERENT ID, start a new one
+      if (sessionData && sessionData.trackingId !== urlId) {
+        sessionData = {
+          trackingId: urlId,
+          startedAt: Date.now(),  // New tracking - set time to now
+        }
+        try {
+          localStorage.setItem('trackingSession', JSON.stringify(sessionData))
+        } catch (err) {
+          console.error('Failed to save session:', err)
+        }
       }
-      try {
-        localStorage.setItem('trackingSession', JSON.stringify(sessionData))
-      } catch (err) {
-        console.error('Failed to save session:', err)
+      // If no session exists yet, create one
+      else if (!sessionData) {
+        sessionData = {
+          trackingId: urlId,
+          startedAt: Date.now(),
+        }
+        try {
+          localStorage.setItem('trackingSession', JSON.stringify(sessionData))
+        } catch (err) {
+          console.error('Failed to save session:', err)
+        }
       }
+      // Otherwise, keep the existing sessionData (don't reset startedAt!)
     }
-    // Otherwise use restored session if available
+    // If NO URL ID but there IS a session, use it (continue tracking)
     else if (sessionData) {
       trackingId = sessionData.trackingId
     }
