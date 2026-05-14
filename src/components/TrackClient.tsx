@@ -43,6 +43,9 @@ export default function TrackClient() {
       const saved = localStorage.getItem('trackingSession')
       if (saved) {
         sessionData = JSON.parse(saved)
+        console.log('✓ Loaded session from localStorage:', sessionData)
+      } else {
+        console.log('No session in localStorage')
       }
     } catch (err) {
       console.error('Failed to parse session:', err)
@@ -52,55 +55,67 @@ export default function TrackClient() {
     if (urlId) {
       // If there's an existing session with a DIFFERENT ID, start a new one
       if (sessionData && sessionData.trackingId !== urlId) {
+        console.log(`Different tracking ID detected: ${sessionData.trackingId} → ${urlId}. Starting new session.`)
         sessionData = {
           trackingId: urlId,
           startedAt: Date.now(),  // New tracking - set time to now
         }
         try {
           localStorage.setItem('trackingSession', JSON.stringify(sessionData))
+          console.log('✓ Saved NEW session:', sessionData)
         } catch (err) {
           console.error('Failed to save session:', err)
         }
       }
       // If no session exists yet, create one
       else if (!sessionData) {
+        console.log(`No session found. Creating first-time session for ${urlId}`)
         sessionData = {
           trackingId: urlId,
           startedAt: Date.now(),
         }
         try {
           localStorage.setItem('trackingSession', JSON.stringify(sessionData))
+          console.log('✓ Saved FIRST-TIME session:', sessionData)
         } catch (err) {
           console.error('Failed to save session:', err)
         }
       }
       // Otherwise, keep the existing sessionData (don't reset startedAt!)
+      else {
+        console.log(`✓ Continuing with existing session for ${sessionData.trackingId}, started at ${new Date(sessionData.startedAt).toLocaleString()}`)
+      }
     }
     // If NO URL ID but there IS a session, use it (continue tracking)
     else if (sessionData) {
+      console.log(`✓ No URL ID, using saved session: ${sessionData.trackingId}`)
       trackingId = sessionData.trackingId
     }
 
-    if (!trackingId) {
+    if (!trackingId || !sessionData) {
+      console.error('❌ Failed to get trackingId or sessionData')
       setLoading(false)
       return
     }
 
+    console.log(`📦 Starting tracking for ${trackingId}, startedAt: ${sessionData.startedAt} (${new Date(sessionData.startedAt).toLocaleString()})`)
     setActiveId(trackingId)
 
     const fetchTrackingData = async () => {
       try {
-        // MUST send startedAt from sessionData to maintain consistent progression
         if (!sessionData?.startedAt) {
-          console.error('ERROR: sessionData.startedAt is missing!', sessionData)
+          console.error('❌ ERROR: sessionData.startedAt is missing!', sessionData)
+          setError('Session error')
           return
         }
         
         const url = `/api/track?id=${trackingId}&startedAt=${sessionData.startedAt}`
+        console.log('📡 Fetching:', url)
         const response = await fetch(url)
         
         if (response.ok) {
           const data = await response.json()
+          console.log('✓ API Response:', { status: data.status, progress: data.progress, elapsed: Math.floor((Date.now() - sessionData.startedAt) / 1000 / 60) + 'min' })
           setTrackingData(data)
           setLastUpdated(new Date().toLocaleTimeString('en-US', { 
             hour: '2-digit',
@@ -110,11 +125,12 @@ export default function TrackClient() {
           }))
           setError('')
         } else {
+          console.error('❌ API returned:', response.status)
           setError('Invalid tracking ID')
         }
       } catch (err) {
+        console.error('❌ Fetch error:', err)
         setError('Failed to fetch tracking data')
-        console.error(err)
       } finally {
         setLoading(false)
       }

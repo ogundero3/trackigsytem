@@ -84,17 +84,21 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Tracking ID not found' }, { status: 404 })
   }
 
-  // If no startedAt provided, this is first request - set it to NOW
-  // BUT: This should NOT happen if client is sending it correctly
+  // startedAt MUST be provided by client
   if (!startedAt) {
-    console.warn(`⚠️ Missing startedAt for ${trackingId} - this should not happen!`)
-    startedAt = Date.now().toString()
+    console.error(`❌ [API] Missing startedAt for ${trackingId}! This breaks tracking progression.`)
+    return NextResponse.json({ error: 'Missing startedAt parameter' }, { status: 400 })
   }
 
   const trackingData = TRACKING_DATABASE[trackingId as keyof typeof TRACKING_DATABASE]
   
   // Parse the startedAt time (always from client)
   const sessionStartTime = parseInt(startedAt, 10)
+  const elapsedMs = Date.now() - sessionStartTime
+  const elapsedMin = Math.floor(elapsedMs / 1000 / 60)
+  
+  console.log(`✓ [API] Tracking ${trackingId}: startedAt=${new Date(sessionStartTime).toLocaleString()}, elapsed=${elapsedMin}min`)
+  
   trackingData.createdAt = new Date(sessionStartTime)
   
   const currentStatus = calculateStatus(trackingData)
