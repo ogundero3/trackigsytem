@@ -14,10 +14,6 @@ interface TrackingData {
   errorMessage?: string
 }
 
-// Server-side storage: Map tracking ID to when it was first started
-// This persists across requests and devices using the same tracking ID
-const TRACKING_SESSIONS = new Map<string, number>()
-
 const TRACKING_DATABASE = {
   'USS0947261': {
     createdAt: new Date(Date.now()),
@@ -88,53 +84,38 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Tracking ID not found' }, { status: 404 })
   }
 
-  let sessionStartTime: number
-
-  // Check if this tracking ID was previously started (cross-device persistence)
-  if (TRACKING_SESSIONS.has(trackingId)) {
-    sessionStartTime = TRACKING_SESSIONS.get(trackingId)!
-    console.log(`✓ [API] Retrieved existing session for ${trackingId}: started at ${new Date(sessionStartTime).toLocaleString()}`)
-  }
-  // If not, check if client provided one (from localStorage)
-  else if (clientStartedAt) {
-    sessionStartTime = parseInt(clientStartedAt, 10)
-    TRACKING_SESSIONS.set(trackingId, sessionStartTime)
-    console.log(`✓ [API] Saved new session for ${trackingId}: started at ${new Date(sessionStartTime).toLocaleString()}`)
-  }
-  // Otherwise this is first request - create session now
-  else {
-    sessionStartTime = Date.now()
-    TRACKING_SESSIONS.set(trackingId, sessionStartTime)
-    console.log(`✓ [API] First request for ${trackingId}: created session at ${new Date(sessionStartTime).toLocaleString()}`)
+  if (!clientStartedAt) {
+    console.error(`❌ [API] Missing startedAt for ${trackingId}`)
+    return NextResponse.json({ error: 'Missing startedAt parameter' }, { status: 400 })
   }
 
   const trackingData = TRACKING_DATABASE[trackingId as keyof typeof TRACKING_DATABASE]
+  const sessionStartTime = parseInt(clientStartedAt, 10)
   const elapsedMs = Date.now() - sessionStartTime
   const elapsedMin = Math.floor(elapsedMs / 1000 / 60)
-  
-  console.log(`📦 [API] Tracking ${trackingId}: elapsed=${elapsedMin}min, progress=${Math.ceil((elapsedMin / 120) * 100)}%`)
   
   trackingData.createdAt = new Date(sessionStartTime)
   
   const currentStatus = calculateStatus(trackingData)
   const events = generateEvents(trackingData, currentStatus)
   
-  // Calculate if delivery is delayed (expected time has passed)
+  // Calculate if delivery is delayed (120 minutes elapsed)
+  // Once it reaches error state, it stays in error state FOREVER
   const now = new Date()
-  const expectedDeliveryTime = new Date(
-    trackingData.createdAt.getTime() + 3 * trackingData.updateIntervalMinutes * 60 * 1000,
-  )
-  const isDelayed = now > expectedDeliveryTime
+  const errorTime = new Date(sessionStartTime + 120 * 60 * 1000) // 120 minutes
+  const isDelayed = now >= errorTime
 
   const response: TrackingData = {
     id: trackingId,
-    status: currentStatus,
-    currentStep: trackingData.steps[Math.min(currentStatus - 1, trackingData.steps.length - 1)].step,
-    progress: currentStatus === 3 ? 75 : Math.round((currentStatus / trackingData.steps.length) * 100),
-    estimatedDelivery: expectedDeliveryTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+    status: isDelayed ? 4 : currentStatus, // Status 4 = Error state (stays forever)
+    currentStep: isDelayed 
+      ? 'Delivery Delayed' 
+      : trackingData.steps[Math.min(currentStatus - 1, trackingData.steps.length - 1)].step,
+    progress: isDelayed ? 75 : (currentStatus === 3 ? 75 : Math.round((currentStatus / trackingData.steps.length) * 100)),
+    estimatedDelivery: errorTime.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
     events,
     hasError: isDelayed,
-    errorMessage: isDelayed ? 'Delivery delayed - Our team is investigating this issue. We will contact you shortly.' : undefined,
+    errorMessage: isDelayed ? 'Your shipment is experiencing an unexpected delay. Our logistics team is investigating and working to resolve this.' : undefined,
   }
 
   return NextResponse.json(response)
