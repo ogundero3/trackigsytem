@@ -21,12 +21,8 @@ export default function Home() {
     setError('')
 
     try {
-      const response = await fetch(`/api/track?id=${trackingId}`)
-      if (response.ok) {
-        router.push(`/track?id=${trackingId}`)
-      } else {
-        setError('Invalid tracking ID. Please verify and try again.')
-      }
+      // Just redirect to track page - session will be created there
+      router.push(`/track?id=${trackingId}`)
     } catch (err) {
       setError('Unable to process your request. Please try again.')
       console.error(err)
