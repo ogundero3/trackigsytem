@@ -14,9 +14,6 @@ interface TrackingData {
   errorMessage?: string
 }
 
-// Storage for tracking session start times (persists during session)
-const SESSION_STORAGE: Record<string, number> = {}
-
 const TRACKING_DATABASE = {
   'USS0947261': {
     createdAt: new Date(Date.now()),
@@ -81,7 +78,7 @@ function generateEvents(
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const trackingId = searchParams.get('id')
-  const startedAt = searchParams.get('startedAt') // Optional: client provides when session started
+  const startedAt = searchParams.get('startedAt')
 
   if (!trackingId || !(trackingId in TRACKING_DATABASE)) {
     return NextResponse.json({ error: 'Tracking ID not found' }, { status: 404 })
@@ -89,14 +86,10 @@ export async function GET(request: NextRequest) {
 
   const trackingData = TRACKING_DATABASE[trackingId as keyof typeof TRACKING_DATABASE]
   
-  // If this is the first request for this tracking ID, set the createdAt time
-  if (!SESSION_STORAGE[trackingId]) {
-    SESSION_STORAGE[trackingId] = startedAt ? parseInt(startedAt) : Date.now()
-    trackingData.createdAt = new Date(SESSION_STORAGE[trackingId])
-  } else {
-    // Use the stored session start time for consistent progression
-    trackingData.createdAt = new Date(SESSION_STORAGE[trackingId])
-  }
+  // ALWAYS use the startedAt time from client (stored in localStorage)
+  // This ensures consistent progression regardless of server restarts
+  const sessionStartTime = startedAt ? parseInt(startedAt) : Date.now()
+  trackingData.createdAt = new Date(sessionStartTime)
   
   const currentStatus = calculateStatus(trackingData)
   const events = generateEvents(trackingData, currentStatus)
