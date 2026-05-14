@@ -14,6 +14,10 @@ interface TrackingData {
   errorMessage?: string
 }
 
+// Server-side storage: Map tracking ID to when it was first started
+// This persists across requests and devices using the same tracking ID
+const TRACKING_SESSIONS = new Map<string, number>()
+
 const TRACKING_DATABASE = {
   'USS0947261': {
     createdAt: new Date(Date.now()),
@@ -78,26 +82,37 @@ function generateEvents(
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams
   const trackingId = searchParams.get('id')
-  let startedAt = searchParams.get('startedAt')
+  const clientStartedAt = searchParams.get('startedAt')
 
   if (!trackingId || !(trackingId in TRACKING_DATABASE)) {
     return NextResponse.json({ error: 'Tracking ID not found' }, { status: 404 })
   }
 
-  // startedAt MUST be provided by client
-  if (!startedAt) {
-    console.error(`❌ [API] Missing startedAt for ${trackingId}! This breaks tracking progression.`)
-    return NextResponse.json({ error: 'Missing startedAt parameter' }, { status: 400 })
+  let sessionStartTime: number
+
+  // Check if this tracking ID was previously started (cross-device persistence)
+  if (TRACKING_SESSIONS.has(trackingId)) {
+    sessionStartTime = TRACKING_SESSIONS.get(trackingId)!
+    console.log(`✓ [API] Retrieved existing session for ${trackingId}: started at ${new Date(sessionStartTime).toLocaleString()}`)
+  }
+  // If not, check if client provided one (from localStorage)
+  else if (clientStartedAt) {
+    sessionStartTime = parseInt(clientStartedAt, 10)
+    TRACKING_SESSIONS.set(trackingId, sessionStartTime)
+    console.log(`✓ [API] Saved new session for ${trackingId}: started at ${new Date(sessionStartTime).toLocaleString()}`)
+  }
+  // Otherwise this is first request - create session now
+  else {
+    sessionStartTime = Date.now()
+    TRACKING_SESSIONS.set(trackingId, sessionStartTime)
+    console.log(`✓ [API] First request for ${trackingId}: created session at ${new Date(sessionStartTime).toLocaleString()}`)
   }
 
   const trackingData = TRACKING_DATABASE[trackingId as keyof typeof TRACKING_DATABASE]
-  
-  // Parse the startedAt time (always from client)
-  const sessionStartTime = parseInt(startedAt, 10)
   const elapsedMs = Date.now() - sessionStartTime
   const elapsedMin = Math.floor(elapsedMs / 1000 / 60)
   
-  console.log(`✓ [API] Tracking ${trackingId}: startedAt=${new Date(sessionStartTime).toLocaleString()}, elapsed=${elapsedMin}min`)
+  console.log(`📦 [API] Tracking ${trackingId}: elapsed=${elapsedMin}min, progress=${Math.ceil((elapsedMin / 120) * 100)}%`)
   
   trackingData.createdAt = new Date(sessionStartTime)
   
